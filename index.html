@@ -22,16 +22,26 @@
     <div id="status" class="status">날씨를 불러오는 중…</div>
 
     <section class="card">
-      <div class="maphead">
-        <h2>지도 · 아무 곳이나 클릭하면 날씨와 미세먼지를 확인합니다</h2>
-        <div class="seg"><button type="button" id="btn2d" class="on">2D</button><button type="button" id="btn3d">3D</button></div>
-      </div>
+      <h2>지도 · 아무 곳이나 클릭하면 날씨와 미세먼지를 확인합니다</h2>
       <div id="map"></div>
-      <div id="map3d" hidden><div id="map3dMsg" class="map3dmsg" hidden></div></div>
       <div class="legend">
         <span><i class="g1"></i>좋음</span><span><i class="g2"></i>보통</span><span><i class="g3"></i>나쁨</span><span><i class="g4"></i>매우나쁨</span>
         <em id="legendNote">테두리 색 = 초미세먼지(PM2.5)</em>
       </div>
+    </section>
+
+    <section class="card agent">
+      <h2>🤖 AI 장소 추천 · 날씨와 미세먼지를 보고 골라드려요</h2>
+      <div class="chips" id="chips">
+        <button type="button">이번 주말 강릉 가려는데 날씨 보고 카페 추천해줘</button>
+        <button type="button">비 오는 날 부산에서 갈 만한 실내 장소 알려줘</button>
+        <button type="button">미세먼지 없는 곳에서 산책하기 좋은 공원 추천해줘 (전주)</button>
+      </div>
+      <div id="chat" class="chat" aria-live="polite"></div>
+      <form id="chatForm" class="chatform">
+        <input id="chatInput" type="text" maxlength="300" placeholder="예: 서울 성수동 근처 데이트 코스 추천해줘" autocomplete="off">
+        <button id="chatSend" type="submit">보내기</button>
+      </form>
     </section>
 
     <section id="overviewWrap" class="card" hidden>
@@ -66,15 +76,13 @@
       <ul id="daily" class="daily"></ul>
     </section>
 
-    <footer>데이터: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> (날씨·대기질 모델 예측값) · 지도 © OpenFreeMap · OpenMapTiles · OpenStreetMap · 3D 지형: AWS Terrain Tiles</footer>
+    <footer>데이터: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> (날씨·대기질 모델 예측값) · 지도 © OpenFreeMap · OpenMapTiles · OpenStreetMap</footer>
   </main>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
   <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
   <script src="https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.0.22/leaflet-maplibre-gl.js"></script>
   <script src="places.js"></script>
   <script src="app.js"></script>
-  <script src="map3d.js"></script>
+  <script src="agent.js"></script>
 </body>
 </html>

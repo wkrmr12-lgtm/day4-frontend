@@ -244,8 +244,7 @@ function focusMap(place){
   const ll = [place.latitude, place.longitude];
   if(selMarker) selMarker.setLatLng(ll);
   else selMarker = L.circleMarker(ll, { radius: 9, color: "#fff", weight: 3, fillColor: "#ff4d6d", fillOpacity: 1 }).addTo(map);
-  map.flyTo(ll, Math.max(map.getZoom(), 8), { duration: .8 });
-  if(typeof Map3D !== "undefined") Map3D.focus(place);
+  if(Date.now() >= (window.noFlyUntil || 0)) map.flyTo(ll, Math.max(map.getZoom(), 8), { duration: .8 });   // AI 추천 직후엔 추천 장소 범위를 유지
 }
 // 클릭한 좌표 → 가장 가까운 내장 지역 이름 (역지오코딩 키 없이)
 function distKm(a,b,c,d){ const R=6371,t=x=>x*Math.PI/180,dl=t(c-a),dn=t(d-b);
@@ -274,12 +273,10 @@ async function loadOverview(){
   try{
     const [wres, air] = await Promise.all([fetchRetry("https://api.open-meteo.com/v1/forecast?" + wp).then(r=>r.json()), fetchAir(pts).catch(()=>null)]);
     provMarkers.forEach(m=>m.remove()); provMarkers = [];
-    const ov = [];
     $("overview").innerHTML = PROVINCES.map((pv,i)=>{
       const c = wres[i].current, x = info(c.weather_code, c.is_day), t = Math.round(c.temperature_2m);
       const pm = air?.[i]?.current?.pm2_5, g = g25(pm), gc = g<0 ? "gx" : "g"+(g+1);
       const nm = shortName(pv[0]);
-      ov.push({ full: pv[0], short: nm, latitude: pv[1], longitude: pv[2], icon: x.icon, temp: t, pm, g });
       // 지도 마커
       const m = L.marker([pv[1],pv[2]], { icon: L.divIcon({ className:"", iconSize:[58,44], iconAnchor:[29,22],
         html:`<div class="pin ${gc}"><span>${x.icon}</span><b>${t}°</b></div>` }), title: `${pv[0]} · PM2.5 ${pm ?? "-"}` }).addTo(map);
@@ -287,8 +284,7 @@ async function loadOverview(){
       provMarkers.push(m);
       return `<button class="cell ${gc}" data-i="${i}"><span class="n">${nm}</span><span class="i">${x.icon}</span><span class="t">${t}°</span><span class="pm">PM2.5 ${pm!=null?Math.round(pm):"-"}</span></button>`;
     }).join("");
-    window.overviewData = ov; if(typeof Map3D !== "undefined") Map3D.setData();
-    $("overviewWrap").hidden = false;
+        $("overviewWrap").hidden = false;
   }catch(e){ /* 개요 실패는 무시 */ }
 }
 $("overview").addEventListener("click", e=>{
