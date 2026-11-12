@@ -19,7 +19,7 @@ lib/tools.js                                도구 2개: get_weather, find_spots
 ## Vercel 배포
 1. GitHub 저장소를 Vercel에 Import (Framework: Other, Root Directory: `./`)
 2. **Settings → Environment Variables** 에 `GEMINI_API_KEY` 등록 ([Google AI Studio](https://aistudio.google.com/apikey)에서 발급)
-3. (선택) `GEMINI_MODEL` 로 모델 변경 (기본 `gemini-3.8-flash`)
+3. (선택) `GEMINI_MODEL` 로 모델 변경 (기본 `gemini-3.1-flash-lite`)
 4. 환경변수 추가 후 **Redeploy**
 
 로컬 실행: `npm i -g vercel` → `.env.local`에 키 저장 → `vercel dev`

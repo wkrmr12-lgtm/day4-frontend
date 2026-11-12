@@ -3,7 +3,7 @@
 // 흐름: 사용자 질문 → Gemini가 도구 선택(get_weather / find_spots) → 서버가 도구 실행 → 결과를 Gemini에 전달 → 최종 추천 답변
 const { DECLARATIONS, runTool } = require("../lib/tools");
 
-const MODEL = process.env.GEMINI_MODEL || "gemini-3.8-flash";
+const MODEL = process.env.GEMINI_MODEL || "gemini-3.1-flash-lite";
 const ENDPOINT = m => `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`;
 // 복사·붙여넣기 과정에서 하이픈(-)이 긴 줄표(—) 등으로 바뀌거나 공백이 섞이는 경우를 자동 복구
 const API_KEY = (process.env.GEMINI_API_KEY || "")
