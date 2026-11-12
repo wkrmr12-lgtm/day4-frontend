@@ -1,4 +1,5 @@
 "use strict";
+const { cleanKey } = require("../lib/key");
 // 진단용: 서버가 읽은 GEMINI_API_KEY가 어떤 값인지 (키 전체는 절대 노출하지 않음: 길이·앞 3글자·뒤 4글자만)
 module.exports = (req, res) => {
   res.setHeader("Cache-Control", "no-store");

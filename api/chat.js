@@ -2,13 +2,11 @@
 // Vercel 서버리스 함수: Gemini 함수 호출(function calling) 에이전트
 // 흐름: 사용자 질문 → Gemini가 도구 선택(get_weather / find_spots) → 서버가 도구 실행 → 결과를 Gemini에 전달 → 최종 추천 답변
 const { DECLARATIONS, runTool } = require("../lib/tools");
+const { cleanKey } = require("../lib/key");
 
 const MODEL = process.env.GEMINI_MODEL || "gemini-3.1-flash-lite";
 const ENDPOINT = m => `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`;
-// 복사·붙여넣기 과정에서 하이픈(-)이 긴 줄표(—) 등으로 바뀌거나 공백이 섞이는 경우를 자동 복구
-const API_KEY = (process.env.GEMINI_API_KEY || "")
-  .replace(/[\u2010-\u2015\u2212\uFE63\uFF0D]/g, "-")
-  .replace(/[\s\u200B-\u200D\uFEFF]/g, "");
+const API_KEY = cleanKey(process.env.GEMINI_API_KEY);   // 복사 과정에서 변환된 대시·공백 자동 복구 (lib/key.js)
 const MAX_STEPS = 5;           // 도구 호출 왕복 최대 횟수
 const hits = new Map();        // 간단한 IP별 호출 제한 (인스턴스 단위, 분당 12회)
 
