@@ -5,7 +5,10 @@ const { DECLARATIONS, runTool } = require("../lib/tools");
 
 const MODEL = process.env.GEMINI_MODEL || "gemini-3.8-flash";
 const ENDPOINT = m => `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`;
-const API_KEY = (process.env.GEMINI_API_KEY || "").trim();     // 복사 시 붙은 공백·줄바꿈 제거
+// 복사·붙여넣기 과정에서 하이픈(-)이 긴 줄표(—) 등으로 바뀌거나 공백이 섞이는 경우를 자동 복구
+const API_KEY = (process.env.GEMINI_API_KEY || "")
+  .replace(/[\u2010-\u2015\u2212\uFE63\uFF0D]/g, "-")
+  .replace(/[\s\u200B-\u200D\uFEFF]/g, "");
 const MAX_STEPS = 5;           // 도구 호출 왕복 최대 횟수
 const hits = new Map();        // 간단한 IP별 호출 제한 (인스턴스 단위, 분당 12회)
 
@@ -66,7 +69,10 @@ module.exports = async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
   if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "POST") return res.status(405).json({ error: "POST만 지원합니다" });
-  if (API_KEY && /[^\x21-\x7E]/.test(API_KEY)) return res.status(500).json({ error: "GEMINI_API_KEY 값에 키가 아닌 문자(한글·긴 줄표·공백 등)가 섞여 있습니다. Vercel에서 값을 지우고 'AIza…'로 시작하는 키만 다시 붙여 넣어 주세요." });
+  if (API_KEY && /[^A-Za-z0-9_-]/.test(API_KEY)) {
+    const bad = [...API_KEY].map((c, i) => /[A-Za-z0-9_-]/.test(c) ? null : `${i + 1}번째(U+${c.codePointAt(0).toString(16).toUpperCase()})`).filter(Boolean).slice(0, 5);
+    return res.status(500).json({ error: `GEMINI_API_KEY 값에 키에 쓸 수 없는 문자가 있습니다 (길이 ${API_KEY.length}자, 문제 위치: ${bad.join(", ")}). Vercel에서 값을 지우고 키만 다시 붙여 넣어 주세요.` });
+  }
   if (!API_KEY) return res.status(500).json({ error: "서버에 GEMINI_API_KEY 환경변수가 설정되지 않았습니다 (Vercel → Settings → Environment Variables)" });
 
   const ip = String(req.headers["x-forwarded-for"] || "").split(",")[0].trim() || "unknown";
