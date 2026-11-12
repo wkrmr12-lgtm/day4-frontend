@@ -1,5 +1,5 @@
 // ───────── 3D 지도 (three.js) ─────────
-// 실제 고도(AWS Terrarium 타일) + 위성 사진(Esri) 지형 위에 시·도별 날씨 라벨과 PM2.5 기둥을 표시합니다. (API 키 불필요)
+// 실제 고도(AWS Terrarium 타일)를 고도별 색으로 칠한 지형 위에 시·도별 날씨 라벨과 PM2.5 기둥을 표시합니다. (API 키 불필요)
 const Map3D = (() => {
   const Z = 7, X0 = 108, Y0 = 49, N = 3;            // z7 타일 3×3 (위도 약 32.0°~38.7°, 경도 약 124.7°~132.2°)
   const SIZE = 100, H_SCALE = 0.0009;               // 장면 크기 / 고도 과장(1000m ≈ 0.9) — 지형이 보이도록 약 6배 과장
@@ -26,14 +26,29 @@ const Map3D = (() => {
 
   const loadImg = url => new Promise(res => { const i = new Image(); i.crossOrigin = "anonymous"; i.onload = () => res(i); i.onerror = () => res(null); i.src = url; });
 
+  // 고도 → 색 (깔끔한 지형도 스타일)
+  const SEA0 = [205,228,243], SEA1 = [205,228,243];
+  const RAMP = [[0,[224,236,206]],[150,[200,222,166]],[400,[226,220,170]],[800,[208,188,140]],[1300,[178,150,110]],[1800,[236,232,224]]];
+  const mix = (a, b, t) => [a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t];
+  function landColor(h){
+    for(let i=1; i<RAMP.length; i++) if(h <= RAMP[i][0]) return mix(RAMP[i-1][1], RAMP[i][1], (h - RAMP[i-1][0]) / (RAMP[i][0] - RAMP[i-1][0]));
+    return RAMP[RAMP.length-1][1];
+  }
+  // 대한민국 영역 근사 (휴전선·일본 방향은 대략적인 구분선, 흐리게 처리하는 용도)
+  function isKorea(lat, lon){
+    if(lon > 129.5 && lat < 35.8) return false;                          // 대마도·규슈 등 일본
+    if(lon < 125.9) return true;                                          // 서해 도서
+    return lat <= Math.min(37.75 + (lon - 126.1) * 0.37, 38.62);          // 휴전선 근사
+  }
+
   async function buildTerrain(msg){
-    // 1) 고도 타일 → 높이 배열
-    W = 256 * N;
+    // 1) 고도 타일(z8) → 높이 배열
+    const M = N * 2; W = 256 * M;
     const ec = document.createElement("canvas"); ec.width = ec.height = W;
     const ex = ec.getContext("2d", { willReadFrequently: true });
     const eTiles = [];
-    for(let dy=0; dy<N; dy++) for(let dx=0; dx<N; dx++)
-      eTiles.push(loadImg(`https://s3.amazonaws.com/elevation-tiles-prod/terrarium/${Z}/${X0+dx}/${Y0+dy}.png`).then(i => ({ i, dx, dy })));
+    for(let dy=0; dy<M; dy++) for(let dx=0; dx<M; dx++)
+      eTiles.push(loadImg(`https://s3.amazonaws.com/elevation-tiles-prod/terrarium/${Z+1}/${X0*2+dx}/${Y0*2+dy}.png`).then(i => ({ i, dx, dy })));
     let okE = 0;
     for(const t of await Promise.all(eTiles)) if(t.i){ ex.drawImage(t.i, t.dx*256, t.dy*256); okE++; }
     if(!okE) throw new Error("고도 데이터를 불러오지 못했습니다");
@@ -41,19 +56,34 @@ const Map3D = (() => {
     heights = new Float32Array(W * W);
     for(let i=0; i<W*W; i++) heights[i] = d[i*4] * 256 + d[i*4+1] + d[i*4+2] / 256 - 32768;
 
-    // 2) 위성 타일(z8) → 텍스처
-    msg("위성 지도 불러오는 중…");
-    const S = N * 2, tc = document.createElement("canvas"); tc.width = tc.height = S * 256;
-    const tx = tc.getContext("2d"); tx.fillStyle = "#1d3a5a"; tx.fillRect(0, 0, tc.width, tc.height);
-    const sTiles = [];
-    for(let dy=0; dy<S; dy++) for(let dx=0; dx<S; dx++)
-      sTiles.push(loadImg(`https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${Z+1}/${Y0*2+dy}/${X0*2+dx}`).then(i => ({ i, dx, dy })));
-    for(const t of await Promise.all(sTiles)) if(t.i) tx.drawImage(t.i, t.dx*256, t.dy*256);
+    // 2) 고도·해안선으로 직접 채색 (위성 사진 없음) + 약한 음영
+    msg("지도 그리는 중…");
+    const tc = document.createElement("canvas"); tc.width = tc.height = W;
+    const tctx = tc.getContext("2d"), img = tctx.createImageData(W, W), o = img.data;
+    const lons = new Float32Array(W), lats = new Float32Array(W);
+    for(let i=0; i<W; i++){
+      lons[i] = (X0 + i / W * N) / TILES * 360 - 180;
+      lats[i] = Math.atan(Math.sinh(Math.PI * (1 - 2 * (Y0 + i / W * N) / TILES))) * 180 / Math.PI;
+    }
+    const H = (x, y) => heights[Math.min(W-1, Math.max(0, y)) * W + Math.min(W-1, Math.max(0, x))];
+    for(let y=0; y<W; y++) for(let x=0; x<W; x++){
+      const h = heights[y * W + x];
+      let c;
+      if(h <= 0) c = mix(SEA0, SEA1, Math.min(-h, 120) / 120);
+      else {
+        c = landColor(h);
+        const sh = Math.min(1.15, Math.max(.8, 1 + 0.0005 * ((H(x+1,y) - H(x-1,y)) + (H(x,y+1) - H(x,y-1)))));   // 북서쪽 광원
+        c = [c[0]*sh, c[1]*sh, c[2]*sh];
+        if(!isKorea(lats[y], lons[x])) c = mix(c, [226,228,232], .72);                                        // 북한·일본은 흐리게
+      }
+      const k = (y * W + x) * 4; o[k] = c[0]; o[k+1] = c[1]; o[k+2] = c[2]; o[k+3] = 255;
+    }
+    tctx.putImageData(img, 0, 0);
     const tex = new THREE.CanvasTexture(tc);
     tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
 
     // 3) 지형 메쉬
-    const segs = 383, geo = new THREE.PlaneGeometry(SIZE, SIZE, segs, segs);
+    const segs = 511, geo = new THREE.PlaneGeometry(SIZE, SIZE, segs, segs);
     geo.rotateX(-Math.PI / 2);                       // 위쪽(+y) = 북쪽(-z)
     const pos = geo.attributes.position;
     for(let r=0; r<=segs; r++) for(let c=0; c<=segs; c++){
@@ -82,6 +112,11 @@ const Map3D = (() => {
     return s;
   }
 
+  // 가까운 지역끼리 라벨이 겹치지 않도록 장면 좌표 기준으로 라벨 위치를 비껴 놓음 [dx, dz]
+  const OFF = { "서울특별시":[4,-8], "인천광역시":[-10,-3], "경기도":[11,-1], "충청북도":[11,-5], "세종특별자치시":[-4,-9],
+    "대전광역시":[4,7], "충청남도":[-11,2], "전북특별자치도":[-6,0], "광주광역시":[4,-4], "전라남도":[-6,4],
+    "경상남도":[-8,4], "부산광역시":[5,6], "울산광역시":[8,-2] };
+
   function setData(){
     if(!built) return;
     while(group.children.length){ const o = group.children.pop(); o.geometry?.dispose(); o.material?.map?.dispose(); o.material?.dispose(); }
@@ -93,16 +128,21 @@ const Map3D = (() => {
       col.position.set(x, base + h / 2, z);
       const place = { name: o.full, latitude: o.latitude, longitude: o.longitude };
       col.userData.place = place; group.add(col);
-      const sp = labelSprite(o); sp.position.set(x, base + h + 2.8, z); sp.userData.place = place; group.add(sp);
+      const [dx, dz] = OFF[o.full] || [0, 0], sp = labelSprite(o);
+      sp.position.set(x + dx, base + h + 2.8, z + dz); sp.userData.place = place; group.add(sp);
+      if(dx || dz){
+        const ln = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(x, base + h, z), new THREE.Vector3(x + dx, base + h + 1.2, z + dz)]),
+          new THREE.LineBasicMaterial({ color: 0x55657a })); group.add(ln);
+      }
     });
   }
 
-  function focus(place){
+  function focus(place, move = true){
     lastPlace = place;
     if(!built) return;
     const { x, z } = toScene(place.latitude, place.longitude), y = hAt(x, z);
     selMesh.visible = true; selMesh.position.set(x, y + 1.6, z);
-    tTarget = new THREE.Vector3(x, y, z);
+    if(move) tTarget = new THREE.Vector3(x, y, z);
   }
 
   function frame(){
@@ -143,20 +183,20 @@ const Map3D = (() => {
       renderer = new THREE.WebGLRenderer({ antialias: true });
       renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
       el.appendChild(renderer.domElement);
-      scene = new THREE.Scene(); scene.background = new THREE.Color(0x0e2238);
+      scene = new THREE.Scene(); scene.background = new THREE.Color(0xcde4f3);
       camera = new THREE.PerspectiveCamera(45, 1, .1, 500);
-      camera.position.set(-2, 95, 36);
+      camera.position.set(-2, 100, 50);
       controls = new THREE.OrbitControls(camera, renderer.domElement);
-      controls.target.set(-2, 0, -6); controls.enableDamping = true; controls.dampingFactor = .08;
+      controls.target.set(-2, 0, 4); controls.enableDamping = true; controls.dampingFactor = .08;
       controls.maxPolarAngle = Math.PI * .47; controls.minDistance = 8; controls.maxDistance = 130;
-      scene.add(new THREE.AmbientLight(0xffffff, .78));
-      const sun = new THREE.DirectionalLight(0xffffff, .85); sun.position.set(-40, 80, 50); scene.add(sun);
+      scene.add(new THREE.AmbientLight(0xffffff, .55));
+      const sun = new THREE.DirectionalLight(0xffffff, .5); sun.position.set(-40, 80, 50); scene.add(sun);
       group = new THREE.Group(); scene.add(group);
       selMesh = new THREE.Mesh(new THREE.ConeGeometry(.9, 2.6, 4), new THREE.MeshBasicMaterial({ color: 0xff4d6d }));
       selMesh.rotation.x = Math.PI; selMesh.visible = false; scene.add(selMesh);
       resize(); new ResizeObserver(resize).observe(el);
       await buildTerrain(msg);
-      built = true; setData(); if(lastPlace) focus(lastPlace);
+      built = true; setData(); if(lastPlace) focus(lastPlace, false);
       let down = null;
       renderer.domElement.addEventListener("pointerdown", e => down = [e.clientX, e.clientY]);
       renderer.domElement.addEventListener("pointerup", e => { if(down && Math.hypot(e.clientX - down[0], e.clientY - down[1]) < 5) onClick(e); down = null; });
