@@ -69,8 +69,8 @@ module.exports = async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
   if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "POST") return res.status(405).json({ error: "POST만 지원합니다" });
-  if (API_KEY && /[^A-Za-z0-9_-]/.test(API_KEY)) {
-    const bad = [...API_KEY].map((c, i) => /[A-Za-z0-9_-]/.test(c) ? null : `${i + 1}번째(U+${c.codePointAt(0).toString(16).toUpperCase()})`).filter(Boolean).slice(0, 5);
+  if (API_KEY && /[^A-Za-z0-9_.-]/.test(API_KEY)) {
+    const bad = [...API_KEY].map((c, i) => /[A-Za-z0-9_.-]/.test(c) ? null : `${i + 1}번째(U+${c.codePointAt(0).toString(16).toUpperCase()})`).filter(Boolean).slice(0, 5);
     return res.status(500).json({ error: `GEMINI_API_KEY 값에 키에 쓸 수 없는 문자가 있습니다 (길이 ${API_KEY.length}자, 문제 위치: ${bad.join(", ")}). Vercel에서 값을 지우고 키만 다시 붙여 넣어 주세요.` });
   }
   if (!API_KEY) return res.status(500).json({ error: "서버에 GEMINI_API_KEY 환경변수가 설정되지 않았습니다 (Vercel → Settings → Environment Variables)" });
