@@ -4,7 +4,7 @@ const { cleanKey } = require("../lib/key");
 module.exports = (req, res) => {
   res.setHeader("Cache-Control", "no-store");
   const raw = process.env.GEMINI_API_KEY || "";
-  const key = raw.replace(/[‐-―−﹣－]/g, "-").replace(/[\s​-‍﻿]/g, "");
+  const key = cleanKey(raw);
   res.status(200).json({
     gemini_api_key: !raw ? "없음 (환경변수가 연결되지 않았거나 재배포 전)" : {
       raw_length: raw.length, length: key.length,
