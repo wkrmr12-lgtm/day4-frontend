@@ -22,11 +22,15 @@
     <div id="status" class="status">날씨를 불러오는 중…</div>
 
     <section class="card">
-      <h2>지도 · 아무 곳이나 클릭하면 날씨와 미세먼지를 확인합니다</h2>
+      <div class="maphead">
+        <h2>지도 · 아무 곳이나 클릭하면 날씨와 미세먼지를 확인합니다</h2>
+        <div class="seg"><button type="button" id="btn2d" class="on">2D</button><button type="button" id="btn3d">3D</button></div>
+      </div>
       <div id="map"></div>
+      <div id="map3d" hidden><div id="map3dMsg" class="map3dmsg" hidden></div></div>
       <div class="legend">
         <span><i class="g1"></i>좋음</span><span><i class="g2"></i>보통</span><span><i class="g3"></i>나쁨</span><span><i class="g4"></i>매우나쁨</span>
-        <em>테두리 색 = 초미세먼지(PM2.5)</em>
+        <em id="legendNote">테두리 색 = 초미세먼지(PM2.5)</em>
       </div>
     </section>
 
@@ -62,12 +66,15 @@
       <ul id="daily" class="daily"></ul>
     </section>
 
-    <footer>데이터: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> (날씨·대기질 모델 예측값) · 지도 © OpenFreeMap · OpenMapTiles · OpenStreetMap</footer>
+    <footer>데이터: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> (날씨·대기질 모델 예측값) · 지도 © OpenFreeMap · OpenMapTiles · OpenStreetMap · 3D: Esri 위성, AWS Terrain Tiles</footer>
   </main>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
   <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
   <script src="https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.0.22/leaflet-maplibre-gl.js"></script>
   <script src="places.js"></script>
   <script src="app.js"></script>
+  <script src="map3d.js"></script>
 </body>
 </html>
