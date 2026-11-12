@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>실시간 날씨 · Open-Meteo</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app">
+    <form id="search" class="search">
+      <div class="searchbox">
+        <input id="q" type="text" placeholder="지역 검색 (예: 서, 수원, 강남구, Busan)" autocomplete="off" aria-autocomplete="list">
+        <ul id="suggest" class="suggest" hidden></ul>
+      </div>
+      <button type="submit">검색</button>
+      <button type="button" id="locate" title="내 위치">📍</button>
+    </form>
+
+    <div id="status" class="status">날씨를 불러오는 중…</div>
+
+    <section class="card">
+      <h2>지도 · 아무 곳이나 클릭하면 날씨와 미세먼지를 확인합니다</h2>
+      <div id="map"></div>
+      <div class="legend">
+        <span><i class="g1"></i>좋음</span><span><i class="g2"></i>보통</span><span><i class="g3"></i>나쁨</span><span><i class="g4"></i>매우나쁨</span>
+        <em>테두리 색 = 초미세먼지(PM2.5)</em>
+      </div>
+    </section>
+
+    <section id="overviewWrap" class="card" hidden>
+      <h2>전국 날씨 · 초미세먼지 (시·도)</h2>
+      <div id="overview" class="overview"></div>
+    </section>
+
+    <section id="current" class="card current" hidden>
+      <div class="place" id="place"></div>
+      <div class="main">
+        <div class="icon" id="icon"></div>
+        <div class="temp"><span id="temp"></span><small>°C</small></div>
+      </div>
+      <div class="desc" id="desc"></div>
+      <dl class="details">
+        <div><dt>체감</dt><dd id="feels"></dd></div>
+        <div><dt>습도</dt><dd id="humidity"></dd></div>
+        <div><dt>바람</dt><dd id="wind"></dd></div>
+        <div><dt>강수</dt><dd id="precip"></dd></div>
+      </dl>
+      <div class="air" id="air"></div>
+      <div class="updated" id="updated"></div>
+    </section>
+
+    <section id="hourlyWrap" class="card" hidden>
+      <h2>시간별 예보</h2>
+      <div id="hourly" class="hourly"></div>
+    </section>
+
+    <section id="dailyWrap" class="card" hidden>
+      <h2>7일 예보</h2>
+      <ul id="daily" class="daily"></ul>
+    </section>
+
+    <footer>데이터: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> (날씨·대기질 모델 예측값) · 지도 © OpenFreeMap · OpenMapTiles · OpenStreetMap</footer>
+  </main>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+  <script src="https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.0.22/leaflet-maplibre-gl.js"></script>
+  <script src="places.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
