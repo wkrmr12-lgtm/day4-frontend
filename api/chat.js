@@ -5,6 +5,7 @@ const { DECLARATIONS, runTool } = require("../lib/tools");
 
 const MODEL = process.env.GEMINI_MODEL || "gemini-3.8-flash";
 const ENDPOINT = m => `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`;
+const API_KEY = (process.env.GEMINI_API_KEY || "").trim();     // 복사 시 붙은 공백·줄바꿈 제거
 const MAX_STEPS = 5;           // 도구 호출 왕복 최대 횟수
 const hits = new Map();        // 간단한 IP별 호출 제한 (인스턴스 단위, 분당 12회)
 
@@ -37,7 +38,7 @@ function systemPrompt() {
 async function callGemini(contents) {
   const r = await fetch(ENDPOINT(MODEL), {
     method: "POST",
-    headers: { "Content-Type": "application/json", "x-goog-api-key": process.env.GEMINI_API_KEY },
+    headers: { "Content-Type": "application/json", "x-goog-api-key": API_KEY },
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: systemPrompt() }] },
       contents,
@@ -65,7 +66,8 @@ module.exports = async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
   if (req.method === "OPTIONS") return res.status(204).end();
   if (req.method !== "POST") return res.status(405).json({ error: "POST만 지원합니다" });
-  if (!process.env.GEMINI_API_KEY) return res.status(500).json({ error: "서버에 GEMINI_API_KEY 환경변수가 설정되지 않았습니다 (Vercel → Settings → Environment Variables)" });
+  if (API_KEY && /[^\x21-\x7E]/.test(API_KEY)) return res.status(500).json({ error: "GEMINI_API_KEY 값에 키가 아닌 문자(한글·긴 줄표·공백 등)가 섞여 있습니다. Vercel에서 값을 지우고 'AIza…'로 시작하는 키만 다시 붙여 넣어 주세요." });
+  if (!API_KEY) return res.status(500).json({ error: "서버에 GEMINI_API_KEY 환경변수가 설정되지 않았습니다 (Vercel → Settings → Environment Variables)" });
 
   const ip = String(req.headers["x-forwarded-for"] || "").split(",")[0].trim() || "unknown";
   if (rateLimited(ip)) return res.status(429).json({ error: "요청이 너무 많습니다. 잠시 후 다시 시도해 주세요." });
